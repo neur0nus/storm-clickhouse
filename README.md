@@ -80,10 +80,20 @@ JdbcInsertBolt userPersistanceBolt = new JdbcInsertBolt(connectionProvider, simp
 
 ### Usage
 ```xml
+...
+<repositories>
+  <repository>
+    <id>neuronus-github</id>
+    <url>https://github.com/neur0nus</url>
+  </repository>
+</repositories>
+
+...
+
 <dependency>
-    <groupId>neuronus</groupId>
-    <artifactId>storm-clickhouse</artifactId>
-    <version>0.1-SNAPSHOT</version>
+  <groupId>neuronus</groupId>
+  <artifactId>storm-clickhouse</artifactId>
+  <version>0.1-SNAPSHOT</version>
 </dependency>
 ```
 
