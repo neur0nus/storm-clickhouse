@@ -40,7 +40,8 @@ public class BaseFlow {
 		componentToSortedTasks.put("clickhouse-test-bolt", Arrays.asList(new Integer[]{777}));
 		Map<String, Map<String, Fields>> componentToStreamToFields = new HashMap<String, Map<String, Fields>>();
 		Map<String,Fields> s2f = new HashMap<String,Fields>();
-		s2f.put("stream-to-clickhouse", new Fields("t_date","stockid","symbol","strike","calc_date_time"));
+		//s2f.put("stream-to-clickhouse", new Fields("t_date","stockid","symbol","strike","calc_date_time"));
+		s2f.put("stream-to-clickhouse", new Fields("json"));
 		componentToStreamToFields.put("clickhouse-test-bolt", s2f);
 		TopologyContext tctx = new TopologyContext(null, 
 				configMap, 
@@ -77,6 +78,7 @@ public class BaseFlow {
 		
 		configMap.put(Config.TOPOLOGY_MESSAGE_TIMEOUT_SECS, "3");
 		
+		/*
 		List<Column> columnSchema = Lists.newArrayList(
 			    new Column("t_date", java.sql.Types.DATE),
 			    new Column("stockid", java.sql.Types.INTEGER),
@@ -85,17 +87,21 @@ public class BaseFlow {
 			    new Column("calc_date_time", java.sql.Types.TIMESTAMP)
 		);
 		JdbcMapper jdbcMapper = new SimpleJdbcMapper(columnSchema);
-		ClickhouseInsertBolt bolt = new ClickhouseInsertBolt(configMap, jdbcMapper)
+		*/
+		ClickhouseInsertBolt bolt = new ClickhouseInsertBolt(configMap/*, jdbcMapper*/)
 				.withTableName("options");
 		
 		bolt.prepare(configMap, tctx, out);
 		
 		List<Object> values = new ArrayList<Object>();
+		/*
 		values.add(new Date().getTime());
 		values.add(12345);
 		values.add("AAPL.");
 		values.add(1000.0);
 		values.add(System.currentTimeMillis());
+		*/
+		values.add("{\"t_date\":'2017-10-12',\"stockid\":32453,\"symbol\":\"ABCD.\",\"strike\":1631,\"calc_date_time\":"+System.currentTimeMillis()+"}");
 		Tuple tuple = new TupleImpl(tctx, values, 777, "stream-to-clickhouse");
 		
 		bolt.execute(tuple);

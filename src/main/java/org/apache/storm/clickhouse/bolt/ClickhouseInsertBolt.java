@@ -17,38 +17,153 @@
  */
 package org.apache.storm.clickhouse.bolt;
 
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang.Validate;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.storm.clickhouse.jdbc.common.ClickhouseJdbcConnectionProvider;
-import org.apache.storm.jdbc.bolt.JdbcInsertBolt;
+import org.apache.storm.clickhouse.jdbc.common.JsonJdbcMapper;
+import org.apache.storm.jdbc.bolt.AbstractJdbcBolt;
+import org.apache.storm.jdbc.common.Column;
+import org.apache.storm.jdbc.common.ConnectionProvider;
 import org.apache.storm.jdbc.mapper.JdbcMapper;
+import org.apache.storm.task.OutputCollector;
+import org.apache.storm.task.TopologyContext;
+import org.apache.storm.topology.OutputFieldsDeclarer;
+import org.apache.storm.tuple.Tuple;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class ClickhouseInsertBolt extends JdbcInsertBolt {
+public class ClickhouseInsertBolt extends AbstractJdbcBolt {
+	private static final long serialVersionUID = 5457869530320532963L;
+	private static final Logger LOG = LoggerFactory.getLogger(ClickhouseInsertBolt.class);
 
-	private static final long serialVersionUID = 857679777414838414L;
+    private String tableName;
+    private String insertQuery;
+    private JdbcMapper jdbcMapper;
 
+	public ClickhouseInsertBolt(Map<String, Object> configMap) {
+		super(new ClickhouseJdbcConnectionProvider(configMap));
+        this.jdbcMapper = new JsonJdbcMapper();
+	}
+    
 	public ClickhouseInsertBolt(Map<String, Object> configMap, JdbcMapper jdbcMapper) {
-		super(new ClickhouseJdbcConnectionProvider(configMap), jdbcMapper);
+		super(new ClickhouseJdbcConnectionProvider(configMap));
+        Validate.notNull(jdbcMapper);
+        this.jdbcMapper = jdbcMapper;
+	}
+	
+    public ClickhouseInsertBolt(ConnectionProvider connectionProvider) {
+        super(connectionProvider);
+        Validate.notNull(jdbcMapper);
+        this.jdbcMapper = new JsonJdbcMapper();
+    }
+    
+    public ClickhouseInsertBolt(ConnectionProvider connectionProvider,  JdbcMapper jdbcMapper) {
+        super(connectionProvider);
+        Validate.notNull(jdbcMapper);
+        this.jdbcMapper = jdbcMapper;
+    }
+    
+    public String getTableName() {
+		return tableName;
 	}
 
-	@Override
+	public String getInsertQuery() {
+		return insertQuery;
+	}
+
+	public JdbcMapper getJdbcMapper() {
+		return jdbcMapper;
+	}
+
 	public ClickhouseInsertBolt withTableName(String tableName) {
-		super.withTableName(tableName);
-		return this;
-	}
+        if (insertQuery != null) {
+            throw new IllegalArgumentException("You can not specify both insertQuery and tableName.");
+        }
+        this.tableName = tableName;
+        return this;
+    }
 
+    public ClickhouseInsertBolt withInsertQuery(String insertQuery) {
+        if (this.tableName != null) {
+            throw new IllegalArgumentException("You can not specify both insertQuery and tableName.");
+        }
+        this.insertQuery = insertQuery;
+        return this;
+    }
+
+    public ClickhouseInsertBolt withQueryTimeoutSecs(int queryTimeoutSecs) {
+        this.queryTimeoutSecs = queryTimeoutSecs;
+        return this;
+    }
+
+    @SuppressWarnings("rawtypes")
 	@Override
-	public ClickhouseInsertBolt withInsertQuery(String insertQuery) {
-		super.withInsertQuery(insertQuery);
-		return this;
-	}
+    public void prepare(Map map, TopologyContext topologyContext, OutputCollector collector) {
+        super.prepare(map, topologyContext, collector);
+        if(StringUtils.isBlank(tableName) && StringUtils.isBlank(insertQuery)) {
+            throw new IllegalArgumentException("You must supply either a tableName or an insert Query.");
+        }
+        if (this.jdbcMapper instanceof JsonJdbcMapper) {
+        	JsonJdbcMapper ref = (JsonJdbcMapper)this.jdbcMapper;
+        	Connection conn = null; ResultSet rs = null;
+        	try {
+        		conn = super.connectionProvider.getConnection();
+        		DatabaseMetaData dbMeta = conn.getMetaData();
+        		rs = dbMeta.getTables(null, null, null, new String[]{"TABLE"});
+        		if (!rs.next()) throw new IllegalStateException("Can't get tables list from ClickHouse database");
+        		String actualTableName = rs.getString("TABLE_NAME");
+        		rs.close();
+				rs = dbMeta.getColumns(null, null, actualTableName, null);
+				LOG.info("Found table '{}'", actualTableName);
+				Map<String, String> columnsTypeMap = new HashMap<String, String>();
+				while (rs.next()) {
+					String columnName = rs.getString("COLUMN_NAME");
+					String columnType = rs.getString("TYPE_NAME");
+					columnsTypeMap.put(columnName, columnType);
+					LOG.info(" resolved '{}' column: '{}' with type {}", actualTableName, columnName, columnType);
+				}
+				ref.initializeColumns(columnsTypeMap);
+        	} catch(Exception err) {
+        		LOG.error("JSON JDBC mapper initialization error", err);
+        		throw new IllegalStateException(err);
+        	} finally {
+        		if (rs!=null) try { rs.close(); } catch(Exception err) { LOG.warn("ResultSet closing error", err); }
+        		if (conn!=null) try { conn.close(); } catch(Exception err) { LOG.warn("Connection closing error", err); }
+        	}
+        }
+        LOG.info("ClickHouse insert bolt prepared");
+    }
 
+    @SuppressWarnings("rawtypes")
 	@Override
-	public ClickhouseInsertBolt withQueryTimeoutSecs(int queryTimeoutSecs) {
-		super.withQueryTimeoutSecs(queryTimeoutSecs);
-		return this;
-	}
+    protected void process(Tuple tuple) {
+        try {
+            List<Column> columns = jdbcMapper.getColumns(tuple);
+            List<List<Column>> columnLists = new ArrayList<List<Column>>();
+            columnLists.add(columns);
+            if(!StringUtils.isBlank(tableName)) {
+                this.jdbcClient.insert(this.tableName, columnLists);
+            } else {
+                this.jdbcClient.executeInsertQuery(this.insertQuery, columnLists);
+            }
+            this.collector.ack(tuple);
+        } catch (Exception e) {
+            this.collector.reportError(e);
+            this.collector.fail(tuple);
+        }
+    }
 
-	
-	
+    @Override
+    public void declareOutputFields(OutputFieldsDeclarer outputFieldsDeclarer) {
+
+    }
+
 }
