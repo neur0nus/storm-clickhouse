@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>neuronus</groupId>
+  <artifactId>storm-clickhouse</artifactId>
+  <versioning>
+    <versions>
+      <version>0.1-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20171018085528</lastUpdated>
+  </versioning>
+</metadata>
