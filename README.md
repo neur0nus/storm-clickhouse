@@ -1,4 +1,4 @@
-[![storm-clickhouse](https://maven-badges.herokuapp.com/maven-central/neuronus/storm-clickhouse/badge.svg)](https://maven-badges.herokuapp.com/maven-central/neuronus/storm-clickhouse) ClickHouse JDBC for Apache Storm
+ClickHouse JDBC for Apache Storm
 ===============
 
 This package includes the helper classes for integrate [Apache Storm](http://storm.apache.org) with [ClickHouse JDBC driver](https://github.com/yandex/clickhouse-jdbc) via [Storm JDBC](https://github.com/apache/storm/tree/master/external/storm-jdbc).
