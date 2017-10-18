@@ -83,16 +83,31 @@ JdbcInsertBolt userPersistanceBolt = new JdbcInsertBolt(connectionProvider, simp
 ...
 <repositories>
   <repository>
-    <id>github-storm-clickhouse-repo</id>
-    <url>https://github.com/neur0nus/storm-clickhouse/tree/repository</url>
+    <id>storm-clickhouse-mvn-repo</id>
+    <url>https://raw.github.com/neur0nus/storm-clickhouse/mvn-repo/</url>
+    <snapshots>
+      <enabled>true</enabled>
+      <updatePolicy>always</updatePolicy>
+    </snapshots>
   </repository>
 </repositories>
 ...
+<dependency>
+  <groupId>ru.yandex.clickhouse</groupId>
+  <artifactId>clickhouse-jdbc</artifactId>
+  <version>0.1.30</version>
+</dependency>
+<dependency>
+  <groupId>org.apache.storm</groupId>
+  <artifactId>storm-jdbc</artifactId>
+  <version>1.1.1</version>
+</dependency>
 <dependency>
   <groupId>neuronus</groupId>
   <artifactId>storm-clickhouse</artifactId>
   <version>0.1-SNAPSHOT</version>
 </dependency>
+...
 ```
 
 URL syntax:
