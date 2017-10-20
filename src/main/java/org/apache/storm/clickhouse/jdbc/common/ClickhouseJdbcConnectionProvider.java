@@ -31,17 +31,18 @@ public class ClickhouseJdbcConnectionProvider implements ConnectionProvider {
 	private static final Logger LOG = LoggerFactory.getLogger(ClickhouseJdbcConnectionProvider.class);
 	
 	private final Map<String, Object> hikariConfigMap;
+	
 	private transient HikariCPConnectionProviderExt delegate;
 	
 	public ClickhouseJdbcConnectionProvider(Map<String, Object> configMap) {
 		this.hikariConfigMap = new HashMap<String, Object>();
 		if (configMap!=null) this.hikariConfigMap.putAll(configMap);
 		this.hikariConfigMap.put("dataSourceClassName", ClickhouseJdbcDataSourceWrapper.class.getName());
-		this.delegate = new HikariCPConnectionProviderExt(this.hikariConfigMap);
 	}
 	
 	@Override
 	public void prepare() {
+		this.delegate = new HikariCPConnectionProviderExt(this.hikariConfigMap);
 		this.delegate.prepare();
 		LOG.info("ClickHouse connection provider initiated");
 	}
