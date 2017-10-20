@@ -46,11 +46,10 @@ public class ClickhouseInsertBolt extends AbstractJdbcBolt {
 
     private String tableName;
     private String insertQuery;
-    private JdbcMapper jdbcMapper;
+    private transient JdbcMapper jdbcMapper;
 
 	public ClickhouseInsertBolt(Map<String, Object> configMap) {
 		super(new ClickhouseJdbcConnectionProvider(configMap));
-        this.jdbcMapper = new JsonJdbcMapper();
 	}
     
 	public ClickhouseInsertBolt(Map<String, Object> configMap, JdbcMapper jdbcMapper) {
@@ -62,7 +61,6 @@ public class ClickhouseInsertBolt extends AbstractJdbcBolt {
     public ClickhouseInsertBolt(ConnectionProvider connectionProvider) {
         super(connectionProvider);
         Validate.notNull(jdbcMapper);
-        this.jdbcMapper = new JsonJdbcMapper();
     }
     
     public ClickhouseInsertBolt(ConnectionProvider connectionProvider,  JdbcMapper jdbcMapper) {
@@ -108,6 +106,7 @@ public class ClickhouseInsertBolt extends AbstractJdbcBolt {
 	@Override
     public void prepare(Map map, TopologyContext topologyContext, OutputCollector collector) {
         super.prepare(map, topologyContext, collector);
+        if (this.jdbcMapper==null) this.jdbcMapper = new JsonJdbcMapper();
         if(StringUtils.isBlank(tableName) && StringUtils.isBlank(insertQuery)) {
             throw new IllegalArgumentException("You must supply either a tableName or an insert Query.");
         }
