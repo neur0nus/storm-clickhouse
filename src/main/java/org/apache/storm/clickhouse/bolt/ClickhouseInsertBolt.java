@@ -60,7 +60,6 @@ public class ClickhouseInsertBolt extends AbstractJdbcBolt {
 	
     public ClickhouseInsertBolt(ConnectionProvider connectionProvider) {
         super(connectionProvider);
-        Validate.notNull(jdbcMapper);
     }
     
     public ClickhouseInsertBolt(ConnectionProvider connectionProvider,  JdbcMapper jdbcMapper) {
