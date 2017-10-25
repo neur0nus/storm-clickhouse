@@ -3,7 +3,6 @@ package org.apache.storm.clickhouse.jdbc.common;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.sql.Types;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +12,8 @@ import org.apache.storm.jdbc.common.Column;
 import org.apache.storm.jdbc.common.Util;
 import org.apache.storm.jdbc.mapper.JdbcMapper;
 import org.apache.storm.tuple.ITuple;
+import org.joda.time.format.DateTimeFormat;
+import org.joda.time.format.DateTimeFormatter;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -25,8 +26,8 @@ public class JsonJdbcMapper implements JdbcMapper {
 	
 	protected final List<Column> schemaColumns = new ArrayList<Column>(); 
 	protected final JsonParser parser = new JsonParser();
-	protected final SimpleDateFormat FMT_DATE = new SimpleDateFormat("yyyy-MM-dd");
-	protected final SimpleDateFormat FMT_DATETIME = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+	protected final DateTimeFormatter FMT_DATE = DateTimeFormat.forPattern("yyyy-MM-dd"); 
+	protected final DateTimeFormatter FMT_DATETIME = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss"); 
 	
 	public void initializeColumns(Map<String, String> columnsTypeMap) {
 		if (columnsTypeMap==null||columnsTypeMap.isEmpty()) throw new IllegalArgumentException("Columns and types map not specified");
@@ -83,7 +84,7 @@ public class JsonJdbcMapper implements JdbcMapper {
 	                columns.add(new Column(columnName, doubleValue, columnSqlType));
 					break;
 				case Types.DATE:
-	                Date dateValue = new Date(FMT_DATE.parse(elem.getAsString()).getTime());
+	                Date dateValue = new Date(FMT_DATE.parseDateTime(elem.getAsString()).toDate().getTime());
 	                columns.add(new Column(columnName, dateValue, columnSqlType));
 					break;
 				case Types.TIMESTAMP:
